@@ -10,6 +10,10 @@
 
 Bitmap createBitmap(size_t width, size_t height)
 {
+    // check for reasonable size image:
+    // somewhat arbitrary - 1 billion pixels
+    if (width * height > 1000000000) return NULL;
+    
    Bitmap b = malloc(sizeof(struct tagBitmap));
 
    if (!b) return NULL;
@@ -17,10 +21,10 @@ Bitmap createBitmap(size_t width, size_t height)
    b->width = width;
    b->height = height;
    
-   printf("width: %ld   height: %ld    allocated memory: %ld\n",
-             width, height, width * height * 4);
+//   printf("width: %ld   height: %ld    allocated memory: %ld\n",
+//             width, height, width * height * 4);
 
-   b->data = malloc(width * height * 4);
+   b->data = malloc(width * height * sizeof(pixel_t));
 
    if (!b->data)
    {
@@ -28,7 +32,7 @@ Bitmap createBitmap(size_t width, size_t height)
       return NULL;
    }
 
-   memset(b->data, 0, width * height * 4);
+   memset(b->data, 0, width * height * sizeof(pixel_t));
 
    return b;
 }
@@ -101,7 +105,7 @@ bool fillBitmap(Bitmap b, pixel_t colour)
 //    printf("%ld\n", sizeof(pixel_t));
     for (size_t i = 0; i < (b->width * b->height); ++i)
     {
-        printf("index: %ld   \r", i);
+  //      printf("index: %ld   \r", i);
         b->data[i] = colour;
     }
         
@@ -229,7 +233,7 @@ bool saveBitmap(Bitmap src, const char *filename)
    png_write_info(png_ptr, info_ptr);
 
 // Allocate memory for one row (4 bytes per pixel - RGB + A)
-   const int bytesPerPixel = 4;
+   const int bytesPerPixel = sizeof(pixel_t);
    row = (png_bytep) malloc(bytesPerPixel * src->width * sizeof(png_byte));
    
    for (int y = 0; y < src->height; ++y)
