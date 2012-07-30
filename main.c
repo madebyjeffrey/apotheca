@@ -34,11 +34,11 @@ int main()
     }
 
     
-    result = resizeBitmap(b, 800, 600, Pixel(0, 255, 0, 255));
+    result = enlargeBitmap(b, 800, 600, Pixel(0, 255, 0, 255));
     
     if (!result) 
     {
-        fprintf(stderr, "resizeBitmap failed");
+        fprintf(stderr, "enlargeBitmap failed");
         return 1;
     }
 

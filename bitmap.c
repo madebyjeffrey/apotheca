@@ -50,7 +50,7 @@ void deleteBitmap(Bitmap b)
     }
 }
 
-bool resizeBitmap(Bitmap b, size_t w2, size_t h2, pixel_t colour)
+bool enlargeBitmap(Bitmap b, size_t w2, size_t h2, pixel_t colour)
 {
     if (!b) return false;
     
@@ -63,7 +63,7 @@ bool resizeBitmap(Bitmap b, size_t w2, size_t h2, pixel_t colour)
     
     pixel_t *newdata;
     
-    newdata = malloc(w2 * h2 * sizeof(pixel_t);
+    newdata = malloc(w2 * h2 * sizeof(pixel_t));
     
     if (!newdata)
         return false;

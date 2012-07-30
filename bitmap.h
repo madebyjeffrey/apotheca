@@ -18,7 +18,7 @@ typedef struct tagBitmap *Bitmap;
 
 Bitmap createBitmap(size_t width, size_t height);
 void deleteBitmap(Bitmap b);
-bool resizeBitmap(Bitmap b, size_t w2, size_t h2, pixel_t colour);
+bool enlargeBitmap(Bitmap b, size_t w2, size_t h2, pixel_t colour);
 bool fillBitmap(Bitmap b, pixel_t colour);
 bool blitBitmap(Bitmap dst, size_t dx, size_t dy, 
                 Bitmap src, size_t sx, size_t sy, size_t scx, size_t scy);
