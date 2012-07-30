@@ -63,7 +63,7 @@ bool resizeBitmap(Bitmap b, size_t w2, size_t h2, pixel_t colour)
     
     pixel_t *newdata;
     
-    newdata = malloc(w2 * h2 * 4);
+    newdata = malloc(w2 * h2 * sizeof(pixel_t);
     
     if (!newdata)
         return false;
@@ -172,6 +172,7 @@ bool blitBitmap(Bitmap dst, size_t dx, size_t dy,
 
 bool saveBitmap(Bitmap src, const char *filename)
 {
+    if (!src) return false;
     bool code = true;
    FILE *fp = NULL;
    png_structp png_ptr = NULL;
