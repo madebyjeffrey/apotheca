@@ -80,7 +80,7 @@ bool enlargeBitmap(Bitmap b, size_t w2, size_t h2, pixel_t colour)
             {
                 newdata[i * w2 + j] = colour;
             }
-        }
+        } 
     }
     
     // fill the rest 
@@ -92,6 +92,10 @@ bool enlargeBitmap(Bitmap b, size_t w2, size_t h2, pixel_t colour)
         }
     }
     
+    b->width = w2;
+    b->height = h2;
+    
+    // replace with the new data
     free(b->data);
     b->data = newdata;
     
@@ -144,10 +148,10 @@ bool blitBitmap(Bitmap dst, size_t dx, size_t dy,
     if (!dst || !src) return false;
     
     // dx, dy must be within the image dst
-    if (!dx < dst->width && !dy < dst->height) return false;
+    if (!(dx < dst->width) && !(dy < dst->height)) return false;
     
     // sx, sy must be within the image src
-    if (!sx < src->width && !sy < src->height) return false;
+    if (!(sx < src->width) && !(sy < src->height)) return false;
     
     // how much of the width of src will meet the destination
     size_t sw = dst->width - dx;

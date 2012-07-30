@@ -25,4 +25,4 @@ bool blitBitmap(Bitmap dst, size_t dx, size_t dy,
                 
 bool saveBitmap(Bitmap src, const char *filename);
 
-#define  Pixel(r, g, b, a)  r << 24 | g << 16 | b << 8 | a
+#define  Pixel(r, g, b, a)  a << 24 | b << 16 | g << 8 | r
