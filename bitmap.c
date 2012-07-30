@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "png.h"
 
@@ -15,6 +16,9 @@ Bitmap createBitmap(size_t width, size_t height)
 
    b->width = width;
    b->height = height;
+   
+   printf("width: %ld   height: %ld    allocated memory: %ld\n",
+             width, height, width * height * 4);
 
    b->data = malloc(width * height * 4);
 
@@ -42,7 +46,7 @@ void deleteBitmap(Bitmap b)
     }
 }
 
-bool resizeBitmap(Bitmap b, size_t w2, size_t h2, unsigned long colour)
+bool resizeBitmap(Bitmap b, size_t w2, size_t h2, pixel_t colour)
 {
     if (!b) return false;
     
@@ -53,7 +57,7 @@ bool resizeBitmap(Bitmap b, size_t w2, size_t h2, unsigned long colour)
         
     // we are now resizing on at least one dimension
     
-    unsigned long *newdata;
+    pixel_t *newdata;
     
     newdata = malloc(w2 * h2 * 4);
     
@@ -90,17 +94,21 @@ bool resizeBitmap(Bitmap b, size_t w2, size_t h2, unsigned long colour)
     return true;
 }
 
-bool fillBitmap(Bitmap b, unsigned long colour)
+bool fillBitmap(Bitmap b, pixel_t colour)
 {
     if (!b) return false;
     
+//    printf("%ld\n", sizeof(pixel_t));
     for (size_t i = 0; i < (b->width * b->height); ++i)
+    {
+        printf("index: %ld   \r", i);
         b->data[i] = colour;
+    }
         
     return true;
 }
 
-bool putPixel(Bitmap dst, size_t x, size_t y, unsigned long colour)
+bool putPixel(Bitmap dst, size_t x, size_t y, pixel_t colour)
 {
     if (!dst) return false;
     
@@ -113,7 +121,7 @@ bool putPixel(Bitmap dst, size_t x, size_t y, unsigned long colour)
     return false;
 }
 
-bool getPixel(Bitmap src, size_t x, size_t y, unsigned long *colour)
+bool getPixel(Bitmap src, size_t x, size_t y, pixel_t *colour)
 {
     if (!src || !colour) return false;
     
@@ -149,7 +157,7 @@ bool blitBitmap(Bitmap dst, size_t dx, size_t dy,
     for (size_t i = 0; i < sw; ++i)
         for (size_t j = 0; j < sh; ++j)
         {
-            unsigned long colour;
+            pixel_t colour;
             
             getPixel(src, i, j, &colour);
             putPixel(dst, dx + i, dy + j, colour); 
