@@ -3,7 +3,9 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <math.h>
 
+#define PNG_DEBUG 4
 #include "png.h"
 
 #include "bitmap.h"
@@ -174,6 +176,83 @@ bool blitBitmap(Bitmap dst, size_t dx, size_t dy,
     return true;
 }
 
+// Bilinear Sample
+bool sampleBitmapBL(Bitmap src, float x, float y, pixel_t *colour)
+{
+    pixel_t A, B, C, D;
+    
+    getPixel(src, floorl(x), floorl(y), &A);
+    getPixel(src, ceill(x), floorl(y), &B);
+    getPixel(src, floorl(x), ceill(y), &C);
+    getPixel(src, ceill(x), ceill(y), &D);
+
+    float dummy;
+    float w = modff(x, &dummy);
+    float h = modff(y, &dummy);
+    float onelessh = 1 - h;
+    float onelessw = 1 - w;
+    float wh = w * h;
+    
+    float Am = onelessh * onelessw;
+    float Bm = w * onelessh;
+    float Cm = h * onelessw;
+    float Dm = wh;
+    
+    unsigned char pR = Red(A) * Am
+                     + Red(B) * Bm
+                     + Red(C) * Cm
+                     + Red(D) * Dm;
+
+    unsigned char pG = Green(A) * Am
+                     + Green(B) * Bm
+                     + Green(C) * Cm
+                     + Green(D) * Dm;
+                     
+    unsigned char pB = Blue(A) * Am
+                     + Blue(B) * Bm
+                     + Blue(C) * Cm
+                     + Blue(D) * Dm;
+
+    unsigned char pA = Alpha(A) * Am
+                     + Alpha(B) * Bm
+                     + Alpha(C) * Cm
+                     + Alpha(D) * Dm;    
+                     
+//    *colour = A * (1 - h) * (1 - w) + B * w * (1 - h) + C * h * (1 - w) + D * w * h;
+    *colour = Pixel(pR, pG, pB, pA);
+    
+    return true;
+}
+
+bool resizeBitmap(Bitmap src, size_t cx, size_t cy)
+{
+    if (!src) return false;
+    
+    Bitmap dst = createBitmap(cx, cy);
+    
+    if (!dst) return false;
+    
+    pixel_t colour;
+    
+    for (size_t i = 0; i < cx; ++i)
+    {
+        for (size_t j = 0; j < cy; ++j)
+        {
+            sampleBitmapBL(src, i * ((float)src->width / cx),
+                              j * ((float)src->height / cy), 
+                              &colour);
+            putPixel(dst, i, j, colour);
+        }
+    }
+    
+    free(src->data);
+    src->data = dst->data;
+    src->width = dst->width;
+    src->height = dst->height;
+
+    return true;
+}
+
 bool saveBitmap(Bitmap src, const char *filename)
 {
     if (!src) return false;
@@ -266,3 +345,176 @@ bool saveBitmap(Bitmap src, const char *filename)
    
    return code;
 }
+
+
+bool loadBitmap(Bitmap *dst, const char *filename)
+{
+    FILE *file;
+    size_t qty = 0;
+    
+    png_byte pngsig[8];
+    bool is_png = false;
+    fprintf(stderr, "Open <%s>\n", filename);
+    file = fopen(filename, "rb");
+    
+    if (file == NULL)
+    {
+        fprintf(stderr, "Could not open file %s\n", filename);
+        return false;
+        
+    }
+
+    // start check signature
+    qty = fread(pngsig, 1, 8, file);
+    
+    if (qty != 8) 
+    {
+        fprintf(stderr, "Could not read 8 bytes\n");
+        if (feof(file) != 0)
+        {
+            fprintf(stderr, "EOF\n");
+        }
+        fclose(file);
+        return false;
+    }
+    
+
+    is_png = !png_sig_cmp(pngsig, 0, 8);
+    if (!is_png)
+    {
+        fprintf(stderr, "Signature not good\n");
+        fclose(file);
+        return false;
+    }
+    
+    // end check signature
+    
+    
+    // at this point, we know it is a png file
+    // create the read structure, the nulls can be used for custom error
+    // handling
+    png_structp pngPtr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    
+    if (!pngPtr)
+    {
+        fprintf(stderr, "libpng read structure could not be created.\n");
+        fclose(file);
+        return false;
+    }
+    
+    // info struct created
+    png_infop infoPtr = png_create_info_struct(pngPtr);
+    if (!infoPtr)
+    {
+        fprintf(stderr, "libpng info structure could not be created.\n");
+        png_destroy_read_struct(&pngPtr, 0, 0);
+        return false;
+    }
+    
+    png_infop endInfo = png_create_info_struct(pngPtr);
+    if (!endInfo)
+    {
+        png_destroy_read_struct(&pngPtr, &infoPtr, NULL);
+        return false;
+    }
+    
+    // dirty error handling
+    png_bytep *rowPtr = NULL;
+    char *data = NULL;
+    
+    if (setjmp(png_jmpbuf(pngPtr)))
+    {
+        png_destroy_read_struct(&pngPtr, &infoPtr, &endInfo);
+        fprintf(stderr, "error reading info\n");
+        fclose(file);
+        return false;
+    }
+    
+    // let libpng reuse our FILE*
+    png_init_io(pngPtr, file);
+    
+    // we read 8 bytes, let it know
+    png_set_sig_bytes(pngPtr, 8);
+    
+    png_read_info(pngPtr, infoPtr);
+    
+    int width = png_get_image_width(pngPtr, infoPtr);
+    int height = png_get_image_height(pngPtr, infoPtr);
+    png_byte colourType = png_get_color_type(pngPtr, infoPtr);
+    png_byte bit_depth = png_get_bit_depth(pngPtr, infoPtr);
+    png_byte channels = png_get_channels(pngPtr, infoPtr);
+    
+    int passes = png_set_interlace_handling(pngPtr);
+    png_read_update_info(pngPtr, infoPtr);
+    
+    fprintf(stderr, "Size (%d, %d), colour type: %d, depth: %d, channels: %d\n",
+        width, height, (int)colourType, (int)bit_depth, (int)channels);
+    
+    if (colourType != PNG_COLOR_TYPE_RGBA || bit_depth != 8)
+    {
+        fprintf(stderr, "Image is not an RGBA/32 image. No transforms supported yet.\n");
+        png_destroy_read_struct(&pngPtr, &infoPtr, &endInfo);
+        return false;
+    }
+        
+    // don't keep any unknown chunks
+    png_set_keep_unknown_chunks(pngPtr, 
+        PNG_HANDLE_CHUNK_NEVER,
+        NULL,
+        0);
+    
+    
+//    png_read_png(pngPtr, infoPtr, PNG_TRANSFORM_IDENTITY, NULL);
+    
+    png_bytep *row_pointers = malloc(sizeof(png_bytep) * height);
+    for (int y = 0; y < height; ++y)
+        row_pointers[y] = (png_byte*) malloc(png_get_rowbytes(pngPtr, infoPtr));
+
+    if (setjmp(png_jmpbuf(pngPtr)))
+    {
+        png_destroy_read_struct(&pngPtr, &infoPtr, &endInfo);
+        fprintf(stderr, "error reading image data\n");
+        fclose(file);
+        return false;
+    }
+
+    png_read_image(pngPtr, row_pointers);    
+    
+    Bitmap b = createBitmap(width, height);
+    
+    if (!b)
+    {
+        fprintf(stderr, "could not allocate bitmap");
+        png_destroy_read_struct(&pngPtr, &infoPtr, &endInfo);
+        fclose(file);
+
+        return false;
+    }
+
+    png_byte *base = NULL;
+    unsigned char c = 255;
+    
+    for (size_t i = 0; i < width; ++i)
+        for (size_t j = 0; j < height; ++j)
+        {
+            base = &row_pointers[j][i*4];
+            
+            putPixel(b, i, j, Pixelp(base+0, base+1, base+2, &c));
+            //Pixelp(base, base+1, base+2, base+3));
+        }
+
+    *dst = b;
+    
+    for (int y = 0; y < height; ++y)
+    {
+        free(row_pointers[y]);
+    }
+    
+    free(row_pointers);
+            
+    png_destroy_read_struct(&pngPtr, &infoPtr, &endInfo);
+    fclose(file);
+    return true;
+}
+
+    
