@@ -104,3 +104,4 @@ bmp *bmp_resize(bmp *src, size_t cx, size_t cy, sampler s)
     return dst;
 }
 
+

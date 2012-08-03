@@ -31,3 +31,4 @@ int main(int argc, char**argv)
     bmp_free(b);
     bmp_free(fill);
 }
+

@@ -91,3 +91,4 @@ bmp *  bmp_blit(bmp * restrict b1, bmp * restrict b2, unsigned dx, unsigned dy,
 }
 
 
+

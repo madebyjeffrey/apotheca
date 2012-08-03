@@ -275,4 +275,4 @@ bmp *bmp_read(const char *filename)
     return b;
 }
 
-    
+

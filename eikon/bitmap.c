@@ -152,3 +152,4 @@ bmp *  bmp_cpy(bmp * restrict b1, bmp * restrict b2, unsigned x, unsigned y)
     return NULL;   
 }
 
+

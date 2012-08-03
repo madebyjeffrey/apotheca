@@ -85,3 +85,4 @@ pixel_t bmp_sample_nearestNeighbour(bmp *src, float x, float y);
 
 bool bmp_write(bmp *src, const char *filename);
 bmp *bmp_read(const char *filename);
+
