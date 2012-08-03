@@ -24,6 +24,8 @@ if (USE_CLANG)
 
 endif (USE_CLANG)
 
+SET (CMAKE_C_FLAGS "-std=c99")
+
 if (PNG_FOUND)
         include_directories(${PNG_INCLUDE_DIRS})
         add_definitions(${PNG_DEFINITIONS})
