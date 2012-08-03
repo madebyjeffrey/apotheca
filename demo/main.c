@@ -22,11 +22,11 @@ int main(int argc, char**argv)
 
     check(b, "Could not create the bitmap");
 
-    bmp *fill = bmp_fill(Pixel(255, 0, 0, 0));
+    bmp *fill = bmp_fill(b, Pixel(255, 0, 0, 255));
 
     check(fill, "Could not fill bitmap");
 
-    bmp_save(fill, "filled.png");
+    bmp_write(fill, "filled.png");
 
     bmp_free(b);
     bmp_free(fill);
