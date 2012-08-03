@@ -1,4 +1,5 @@
 
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -8,252 +9,9 @@
 #define PNG_DEBUG 4
 #include "png.h"
 
-#include "bitmap.h"
+#include "eikon.h"
 
-Bitmap createBitmap(size_t width, size_t height)
-{
-    // check for reasonable size image:
-    // somewhat arbitrary - 1 billion pixels
-    if (width * height > 1000000000) return NULL;
-    
-   Bitmap b = malloc(sizeof(struct tagBitmap));
-
-   if (!b) return NULL;
-
-   b->width = width;
-   b->height = height;
-   
-//   printf("width: %ld   height: %ld    allocated memory: %ld\n",
-//             width, height, width * height * 4);
-
-   b->data = malloc(width * height * sizeof(pixel_t));
-
-   if (!b->data)
-   {
-      free(b);
-      return NULL;
-   }
-
-   memset(b->data, 0, width * height * sizeof(pixel_t));
-
-   return b;
-}
-
-void deleteBitmap(Bitmap b)
-{
-    if (b)
-    {
-        if (b->data)
-        {
-            free(b->data);
-        }
-        
-        free(b);
-    }
-}
-
-bool enlargeBitmap(Bitmap b, size_t w2, size_t h2, pixel_t colour)
-{
-    if (!b) return false;
-    
-    if (w2 < b->width) 
-        return false;
-    if (h2 < b->height)
-        return false;
-        
-    // we are now resizing on at least one dimension
-    
-    pixel_t *newdata;
-    
-    newdata = malloc(w2 * h2 * sizeof(pixel_t));
-    
-    if (!newdata)
-        return false;
-        
-    // copy from 0 to b->height from old to new
-    for (size_t i = 0; i < b->height; ++i)
-    {
-        memcpy(newdata + (i * w2), 
-               b->data + (i * b->width), 
-               b->width * 4);
-        if (w2 > b->width)
-        {
-            for (size_t j = b->width; j < w2; ++j)
-            {
-                newdata[i * w2 + j] = colour;
-            }
-        } 
-    }
-    
-    // fill the rest 
-    for (size_t i = b->height; i < h2; ++i)
-    {
-        for (size_t j = 0; j < w2; ++j)
-        {
-            newdata[i * w2 + j] = colour;
-        }
-    }
-    
-    b->width = w2;
-    b->height = h2;
-    
-    // replace with the new data
-    free(b->data);
-    b->data = newdata;
-    
-    return true;
-}
-
-bool fillBitmap(Bitmap b, pixel_t colour)
-{
-    if (!b) return false;
-    
-//    printf("%ld\n", sizeof(pixel_t));
-    for (size_t i = 0; i < (b->width * b->height); ++i)
-    {
-  //      printf("index: %ld   \r", i);
-        b->data[i] = colour;
-    }
-        
-    return true;
-}
-
-bool putPixel(Bitmap dst, size_t x, size_t y, pixel_t colour)
-{
-    if (!dst) return false;
-    
-    if (x < dst->width && y < dst->height)
-    {
-        dst->data[y * dst->width + x] = colour;
-        return true;
-    }
-    
-    return false;
-}
-
-bool getPixel(Bitmap src, size_t x, size_t y, pixel_t *colour)
-{
-    if (!src || !colour) return false;
-    
-    if (x < src->width && y < src->height)
-    {
-        *colour = src->data[y * src->width + x];
-        return true;
-    }
-    
-    return false;
-}
-
-bool blitBitmap(Bitmap dst, size_t dx, size_t dy, 
-                Bitmap src, size_t sx, size_t sy, size_t scx, size_t scy)
-{
-    if (!dst || !src) return false;
-    
-    // dx, dy must be within the image dst
-    if (!(dx < dst->width) && !(dy < dst->height)) return false;
-    
-    // sx, sy must be within the image src
-    if (!(sx < src->width) && !(sy < src->height)) return false;
-    
-    // how much of the width of src will meet the destination
-    size_t sw = dst->width - dx;
-    size_t sh = dst->height - dy;
-    
-    // maximum width
-    if (sw > scx) sw = scx;
-    if (sh > scy) sh = scy;
-    
-    // copy all the pixels from the source to the destination
-    for (size_t i = 0; i < sw; ++i)
-        for (size_t j = 0; j < sh; ++j)
-        {
-            pixel_t colour;
-            
-            getPixel(src, i, j, &colour);
-            putPixel(dst, dx + i, dy + j, colour); 
-        }
-        
-    return true;
-}
-
-// Bilinear Sample
-bool sampleBitmapBL(Bitmap src, float x, float y, pixel_t *colour)
-{
-    pixel_t A, B, C, D;
-    
-    getPixel(src, floorl(x), floorl(y), &A);
-    getPixel(src, ceill(x), floorl(y), &B);
-    getPixel(src, floorl(x), ceill(y), &C);
-    getPixel(src, ceill(x), ceill(y), &D);
-
-    float dummy;
-    float w = modff(x, &dummy);
-    float h = modff(y, &dummy);
-    float onelessh = 1 - h;
-    float onelessw = 1 - w;
-    float wh = w * h;
-    
-    float Am = onelessh * onelessw;
-    float Bm = w * onelessh;
-    float Cm = h * onelessw;
-    float Dm = wh;
-    
-    unsigned char pR = Red(A) * Am
-                     + Red(B) * Bm
-                     + Red(C) * Cm
-                     + Red(D) * Dm;
-
-    unsigned char pG = Green(A) * Am
-                     + Green(B) * Bm
-                     + Green(C) * Cm
-                     + Green(D) * Dm;
-                     
-    unsigned char pB = Blue(A) * Am
-                     + Blue(B) * Bm
-                     + Blue(C) * Cm
-                     + Blue(D) * Dm;
-
-    unsigned char pA = Alpha(A) * Am
-                     + Alpha(B) * Bm
-                     + Alpha(C) * Cm
-                     + Alpha(D) * Dm;    
-                     
-//    *colour = A * (1 - h) * (1 - w) + B * w * (1 - h) + C * h * (1 - w) + D * w * h;
-    *colour = Pixel(pR, pG, pB, pA);
-    
-    return true;
-}
-
-bool resizeBitmap(Bitmap src, size_t cx, size_t cy)
-{
-    if (!src) return false;
-    
-    Bitmap dst = createBitmap(cx, cy);
-    
-    if (!dst) return false;
-    
-    pixel_t colour;
-    
-    for (size_t i = 0; i < cx; ++i)
-    {
-        for (size_t j = 0; j < cy; ++j)
-        {
-            sampleBitmapBL(src, i * ((float)src->width / cx),
-                              j * ((float)src->height / cy), 
-                              &colour);
-            putPixel(dst, i, j, colour);
-        }
-    }
-    
-    free(src->data);
-    src->data = dst->data;
-    src->width = dst->width;
-    src->height = dst->height;
-
-    return true;
-}
-
-bool saveBitmap(Bitmap src, const char *filename)
+bool bmp_write(bmp *src, const char *filename)
 {
     if (!src) return false;
     bool code = true;
@@ -347,7 +105,7 @@ bool saveBitmap(Bitmap src, const char *filename)
 }
 
 
-bool loadBitmap(Bitmap *dst, const char *filename)
+bmp *bmp_read(const char *filename)
 {
     FILE *file;
     size_t qty = 0;
@@ -480,7 +238,7 @@ bool loadBitmap(Bitmap *dst, const char *filename)
 
     png_read_image(pngPtr, row_pointers);    
     
-    Bitmap b = createBitmap(width, height);
+    bmp *b = bmp_init(width, height);
     
     if (!b)
     {
@@ -499,11 +257,11 @@ bool loadBitmap(Bitmap *dst, const char *filename)
         {
             base = &row_pointers[j][i*4];
             
-            putPixel(b, i, j, Pixelp(base+0, base+1, base+2, &c));
+            bmp_put(b, i, j, Pixelp(base+0, base+1, base+2, &c));
             //Pixelp(base, base+1, base+2, base+3));
         }
 
-    *dst = b;
+//    *dst = b;
     
     for (int y = 0; y < height; ++y)
     {
@@ -514,7 +272,7 @@ bool loadBitmap(Bitmap *dst, const char *filename)
             
     png_destroy_read_struct(&pngPtr, &infoPtr, &endInfo);
     fclose(file);
-    return true;
+    return b;
 }
 
     
