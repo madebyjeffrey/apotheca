@@ -2,8 +2,8 @@
 cmake_minimum_required(VERSION 2.6)
 project(apotheca)
 
-find_package(png)
-find_package(freetype)
+find_package(PNG)
+find_package(FREETYPE)
 
 option(USE_CLANG "build application with clang" ON)
 
