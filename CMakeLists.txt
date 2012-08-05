@@ -7,6 +7,8 @@ find_package(Freetype)
 
 option(USE_CLANG "build application with clang" ON)
 
+
+
 if (USE_CLANG)
     SET (CMAKE_C_COMPILER_INIT               "/usr/bin/clang")
     SET (CMAKE_C_FLAGS_INIT                  "-Wall -std=c99")

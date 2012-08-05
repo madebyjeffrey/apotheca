@@ -13,6 +13,10 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 
 typedef uint32_t pixel_t;
@@ -86,3 +90,24 @@ pixel_t bmp_sample_nearestNeighbour(bmp *src, float x, float y);
 bool bmp_write(bmp *src, const char *filename);
 bmp *bmp_read(const char *filename);
 
+/* font support */
+
+struct tagFont 
+{
+    FT_Library lib;
+    FT_Face face;
+};
+
+typedef struct tagFont font;
+
+unsigned font_faces(const char *filename);
+font *font_init(const char *filename, int face);
+void font_free(font *font);
+unsigned font_numglyphs(font *font);
+bool font_scalable(font *font);
+bool font_bitmap(font *font);
+bool font_monospace(font *font);
+
+unsigned font_units_per_em(font *font);
+unsigned font_bitmap_strikes(font *font);
+void font_bitmap_strike_sizes(font *font, int **sizes);
